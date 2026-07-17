@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Among Us Santander Quincenas</title>
+    <!-- Scripts Oficiales de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: #161f30;
+            --border-color: #2a3b5c;
+            --impostor-color: #ff4757;
+            --crew-color: #2ed573;
+            --accent-color: #ffa502;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        h1 { color: var(--impostor-color); margin-top: 0; font-size: 1.8rem; }
+
+        input, select, button, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input[type="text"] {
+            background: #0b0e14;
+            border: 1px solid var(--border-color);
+            color: white;
+            text-align: center;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+
+        textarea {
+            background: #0b0e14;
+            border: 1px solid var(--border-color);
+            color: white;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        input[type="file"] {
+            background: #0b0e14;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            color: white;
+            cursor: pointer;
+        }
+
+        select {
+            background: #0b0e14;
+            border: 1px solid var(--border-color);
+            color: white;
+            cursor: pointer;
+        }
+
+        option {
+            background: var(--card-bg);
+            color: white;
+        }
+
+        button {
+            background-color: var(--impostor-color);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+            background-color: #2f3542;
+            border: 1px solid var(--border-color);
+        }
+
+        button.success {
+            background-color: var(--crew-color);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .active {
+            display: block;
+        }
+
+        .resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1.2rem;
+            border: 1px dashed;
+        }
+
+        .impostor-box {
+            border-color: var(--impostor-color);
+            background-color: rgba(255, 71, 87, 0.1);
+        }
+
+        .tripulante-box {
+            border-color: var(--crew-color);
+            background-color: rgba(46, 213, 115, 0.1);
+        }
+
+        .admin-section {
+            margin-top: 30px;
+            border-top: 2px dashed var(--border-color);
+            padding-top: 20px;
+        }
+
+        .admin-toggle {
+            background-color: transparent;
+            color: #747d8c;
+            border: none;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        th { background-color: #0b0e14; }
+
+        .chivato-impostores {
+            background: rgba(255, 71, 87, 0.2);
+            border: 2px solid var(--impostor-color);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .aliados-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 5px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .tasks-container {
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .task-status {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .status-completada {
+            background-color: rgba(46, 213, 115, 0.2);
+            color: var(--crew-color);
+        }
+
+        .status-pendiente {
+            background-color: rgba(255, 165, 2, 0.2);
+            color: var(--accent-color);
+        }
+
+        #imgPreview {
+            max-width: 100%;
+            max-height: 200px;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            display: none;
+        }
+
+        .admin-misiones-list {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+
+        .admin-mision-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.8rem;
+        }
+        .admin-mision-row:last-child { border-bottom: none; }
+
+        .admin-mision-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .admin-mision-buttons button {
+            width: auto;
+            margin: 0;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .editor-container {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .death-alert {
+            background: rgba(255, 71, 87, 0.15);
+            border: 2px dashed var(--impostor-color);
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .gm-list-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--border-color);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+        .gm-list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .gm-list-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AMONG US SANTANDER QUINCENAS</h1>
+    
+    <!-- PANTALLA 1: LOGIN DEL JUGADOR -->
+    <div id="screen-login" class="screen active">
+        <h2>CONSOLA DE ACCESO</h2>
+        <p style="text-align: center; color: #a4b0be;" id="loginInstrucciones">Introduce tu PIN de 4 dígitos:</p>
+        <input type="text" id="codigoInput" placeholder="XXXX" maxlength="4" style="text-transform: uppercase;">
+        <button onclick="comprobarCodigo()">CONECTARSE</button>
+        <div id="loginError" style="color: var(--impostor-color); text-align: center; margin-top: 10px;"></div>
+    </div>
+
+    <!-- PANTALLA 1B: ASOCIAR NOMBRE -->
+    <div id="screen-registro" class="screen">
+        <h2>REGISTRO DE NAVEGACIÓN</h2>
+        <p style="text-align: center; color: #a4b0be;">Identifícate en el sistema para continuar:</p>
+        
+        <select id="selectNombre">
+            <!-- Se inyecta dinámicamente -->
+        </select>
+
+        <button onclick="guardarNombreYVerRol()">CONFIRMAR E IDENTIFICARSE</button>
+    </div>
+
+    <!-- PANTALLA 2: ROL ASIGNADO Y PANEL DE TAREAS -->
+    <div id="screen-rol" class="screen">
+        <h2>SISTEMA IDENTIFICADO</h2>
+        <p style="text-align: center;">Acceso autorizado como: <strong id="nombreUsuario">---</strong></p>
+        
+        <div id="alertaMuerteTripulante" class="death-alert" style="display:none;">
+            <span style="font-size: 1.5rem;">☠️ BLOCK DE CONSOLA ☠️</span><br><br>
+            SISTEMAS VITALES ANULADOS.<br>
+            Has sido eliminado de la nave.<br><br>
+            Entras en estado de bloqueo total. Tienes prohibido realizar acciones, misiones, sabotajes o debatir durante la partida.
+        </div>
+
+        <div id="contenidoPanelVivo">
+            <div id="cajaRol" class="resultado">
+                <!-- Inyección dinámica -->
+            </div>
+
+            <!-- SECCIÓN DE ASESINATO EXCLUSIVA PARA IMPOSTORES -->
+            <div id="seccionAsesinarImpostor" style="display:none; margin-top:25px; border-top: 2px dashed var(--impostor-color); padding-top:20px;">
+                <h3 style="color: var(--impostor-color); margin-top:0;">💀 MENÚ DE ASESINATO</h3>
+                <div id="bloqueFormularioAsesinar">
+                    <p style="font-size:0.8rem; text-align:center; color:#a4b0be;">Introduce el PIN de 4 dígitos de tu víctima para eliminarla:</p>
+                    <input type="text" id="pinVictimaInput" placeholder="XXXX" maxlength="4" style="text-transform: uppercase;">
+                    <button onclick="ejecutarAsesinato()">CONECTAR ARMA Y ELIMINAR</button>
+                </div>
+                <div id="timerBloqueoAsesinar" style="display:none; text-align:center; padding:10px; background:rgba(255,165,2,0.1); border:1px solid var(--accent-color); border-radius:5px;">
+                    <!-- Contador de cooldown -->
+                </div>
+            </div>
+
+            <!-- LISTADO DE TAREAS PARA LOS TRIPULANTES -->
+            <div id="listaTareasTripulante" style="display:none;">
+                <h3>🛠️ TUS MISIONES ASIGNADAS:</h3>
+                <p style="font-size: 0.8rem; color: #a4b0be; text-align: center; margin-bottom: 15px;">
+                    Debes desplazarte físicamente al lugar y escanear el código QR para desbloquear y realizar la misión.
+                </p>
+                <div class="tasks-container" id="tasksContainer">
+                    <!-- Se llena con JS -->
+                </div>
+            </div>
+        </div>
+
+        <button class="secondary" onclick="cerrarSesion()" style="margin-top: 20px;">CERRAR SESIÓN</button>
+    </div>
+
+    <!-- PANTALLA 2B: DETALLE DE LA TAREA -->
+    <div id="screen-mision" class="screen">
+        <h2 id="misionTitulo">MISION LOCALIZADA</h2>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p id="misionExplicacion" style="font-size: 1rem; line-height: 1.4;"></p>
+        </div>
+
+        <div id="misionFormulario">
+            <!-- Formulario dinámico -->
+        </div>
+
+        <button class="secondary" onclick="cancelarMision()">VOLVER AL INICIO</button>
+    </div>
+
+    <!-- PANTALLA 3: PANEL DEL COORDINADOR -->
+    <div id="screen-admin" class="screen">
+        <h2>PANEL DE CONTROL (COORDINADOR)</h2>
+        <p style="text-align: center; color: var(--accent-color); margin-bottom: 20px;">Sección secreta de coordinación</p>
+        
+        <div class="chivato-impostores">
+            <h4 style="margin: 0 0 10px 0; color: var(--impostor-color); letter-spacing: 1px;">🚨 IMPOSTORES ACTIVOS:</h4>
+            <div id="pinsImpostores" style="font-size: 1.4rem; font-weight: bold; letter-spacing: 2px;">---</div>
+        </div>
+
+        <button onclick="generarPartida(true)">🎲 REPARTIR / MEZCLAR ROLES</button>
+        <button class="secondary" onclick="regenerarCodigosAzar()" style="background-color: var(--accent-color);">🔀 REGENERAR TODOS LOS PINs</button>
+        <button class="secondary" onclick="reiniciarNombres()">🔄 REINICIAR ASIGNACIONES DE NOMBRE</button>
+
+        <!-- GESTOR DE PARTICIPANTES -->
+        <h3>👥 GESTIÓN DE PARTICIPANTES</h3>
+        <p style="font-size: 0.75rem; color: #a4b0be; margin-bottom: 10px;">Añade o elimina monitores antes de empezar la partida:</p>
+        <div class="gm-list-box" id="gmListParticipantes">
+            <!-- Se llena con JS -->
+        </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="gmNuevoNombreInput" placeholder="Nombre monitor" style="margin:0; text-align:left; font-weight:normal; letter-spacing:0px;">
+            <button class="success" onclick="gmAñadirParticipante()" style="margin:0; width:auto; white-space:nowrap;">➕ Añadir Monitor</button>
+        </div>
+
+        <h3>✏️ EDITOR DE MISIONES</h3>
+        <div class="editor-container" id="editorMisionesContainer">
+            <!-- Se inyecta con JS -->
+        </div>
+        <button class="success" onclick="guardarEdicionMisiones()">💾 Guardar Cambios en Misiones</button>
+        <br><br>
+
+        <h3>🔗 GENERADOR DE QR MISIONES</h3>
+        <div class="admin-misiones-list" id="listaMisionesAdmin">
+            <!-- Se inyecta dinámicamente con JS -->
+        </div>
+
+        <h3>ESTADO DE TODOS LOS PINs</h3>
+        <table id="tablaJugadores">
+            <thead>
+                <tr>
+                    <th>PIN</th>
+                    <th>Monitor</th>
+                    <th>Rol</th>
+                    <th>Estado vital</th>
+                    <th>Tareas Realizadas</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoTabla">
+                <!-- Se llena con JS -->
+            </tbody>
+        </table>
+
+        <div id="visorFotosAdmin" style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; display: none;">
+            <h3>🔍 Fotos de Misiones</h3>
+            <div id="visorContenido" style="text-align: center;"></div>
+        </div>
+
+        <button class="secondary" onclick="irPantalla('screen-login')" style="margin-top: 20px;">VOLVER AL LOGIN</button>
+    </div>
+
+    <!-- BOTÓN SECRETO PARA EL COORDINADOR -->
+    <div class="admin-section">
+        <button class="admin-toggle" onclick="intentarAccesoAdmin()">⚙️ Acceso Administrador</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURACIÓN DE FIREBASE (PON TUS DATOS AQUÍ)
+    // ==========================================
+    const firebaseConfig = {
+  apiKey: "AIzaSyAR2TSeuZePkum0txTGscbLaxxnXnnZIos",
+  authDomain: "amongus-31e83.firebaseapp.com",
+  databaseURL: "https://amongus-31e83-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "amongus-31e83",
+  storageBucket: "amongus-31e83.firebasestorage.app",
+  messagingSenderId: "68530531796",
+  appId: "1:68530531796:web:b1f67388307d606765ba41"
+};
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const listadoBaseMonitores = [
+        { codigo: "H7X9", nombre: "Fer" }, { codigo: "K4Y2", nombre: "Lore" },
+        { codigo: "W8R5", nombre: "Basa" }, { codigo: "N3F6", nombre: "Ruby" },
+        { codigo: "P9T2", nombre: "Marta" }, { codigo: "B5M8", nombre: "Nere" },
+        { codigo: "Z7Q3", nombre: "Cris" }, { codigo: "V2D9", nombre: "Javi" },
+        { codigo: "C6G4", nombre: "Nora" }, { codigo: "X8J3", nombre: "Juan" },
+        { codigo: "L5S7", nombre: "Arancha" }, { codigo: "A9K2", nombre: "Martín" }
+    ];
+
+    const misionesDefecto = {
+        1: { titulo: "Lugar 1: Reactores del Comedor", explicacion: "Ve al comedor del campamento. Encuentra el reactor principal y saca una foto donde se te vea a ti y a algún compañero haciendo la señal de victoria." },
+        2: { titulo: "Lugar 2: Laboratorio de Manualidades", explicacion: "Ve al taller o zona de manualidades. Consigue una cartulina verde, sostenla bien arriba y sácate una foto con ella como si fuera un escudo de la nave." },
+        3: { titulo: "Lugar 3: Almacén de Materiales", explicacion: "Acércate al almacén de deportes. Encuentra un balón de baloncesto y sácate una foto de espaldas encestando o sujetándolo con la cabeza." },
+        4: { titulo: "Lugar 4: Campo de Despegue (Patio)", explicacion: "Sal al patio exterior. Encuentra el árbol más grande y sácate una foto abrazándolo como si estuvieras protegiéndote de una tormenta espacial." },
+        5: { titulo: "Lugar 5: Cabina de Navegación (Oficina)", explicacion: "Ve discretamente cerca de la zona de coordinación u oficina. Haz una foto de tu credencial física o tu mano sobre la puerta de forma sigilosa." }
+    };
+
+    let misionesDefinidas = misionesDefecto;
+
+    let partida = {
+        rolesAsignados: false,
+        jugadores: listadoBaseMonitores.map(m => ({ 
+            ...m, rol: "pendiente", vivo: true, 
+            tareas: { 1: { hecho: false, foto: "" }, 2: { hecho: false, foto: "" }, 3: { hecho: false, foto: "" }, 4: { hecho: false, foto: "" }, 5: { hecho: false, foto: "" } },
+            penalizacionAsesinarHasta: 0, historialAsesinatos: []
+        })),
+        sabotajes: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        historialSabotajes: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    };
+
+    let jugadorActualLocal = null;
+    let misionActualEscaneada = null; 
+    let fotoBase64Temporal = ""; 
+    let timerInterval = null; 
+    let killTimerInterval = null; 
+    let currentScreenId = "screen-login";
+
+    // SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE
+    db.ref("partida_among_us").on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            partida = data;
+            
+            // Si el jugador actual está logueado, actualizamos sus datos en vivo
+            if (jugadorActualLocal) {
+                const refreshed = partida.jugadores.find(j => j.codigo === jugadorActualLocal.codigo);
+                if (refreshed) {
+                    jugadorActualLocal = refreshed;
+                    // Si la pantalla activa es el panel principal, refrescar el rol/estado vital
+                    if (currentScreenId === "screen-rol") {
+                        mostrarRolPantalla(jugadorActualLocal);
+                    }
+                }
+            }
+            
+            // Refrescar vistas del administrador si está en ella
+            if (currentScreenId === "screen-admin") {
+                actualizarTablaAdmin();
+                inyectarMisionesControlAdmin();
+                gmRenderListaParticipantes();
+            }
+        } else {
+            // Primera vez: subir la estructura base
+            guardarEnFirebase();
+        }
+    });
+
+    db.ref("misiones_among_us").on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            misionesDefinidas = data;
+        } else {
+            db.ref("misiones_among_us").set(misionesDefecto);
+        }
+
+        // --- FIX: Actualizar la interfaz en cuanto lleguen los textos editados de Firebase ---
+        
+        // 1. Si el jugador está en la pantalla de Login tras escanear el QR
+        if (misionActualEscaneada && currentScreenId === 'screen-login' && !localStorage.getItem('sesion_activa_among_us')) {
+            document.getElementById('loginInstrucciones').innerHTML = `🚨 <strong style="color: var(--accent-color)">Misión detectada: ${misionesDefinidas[misionActualEscaneada].titulo}</strong>.<br>Introduce tu PIN para acceder:`;
+        }
+
+        // 2. Si el jugador ya está dentro de la pantalla de la misión abierta
+        if (misionActualEscaneada && currentScreenId === 'screen-mision') {
+            const m = misionesDefinidas[misionActualEscaneada];
+            const tituloDOM = document.getElementById('misionTitulo');
+            
+            // Solo actualizamos si no es una pantalla de sabotaje activo (para no borrar las alertas rojas)
+            if (!tituloDOM.innerText.includes("SABOTAJE") && !tituloDOM.innerText.includes("SECTOR")) {
+                tituloDOM.innerText = m.titulo;
+                document.getElementById('misionExplicacion').innerText = m.explicacion;
+            }
+        }
+
+        // 3. Si el jugador es Tripulante y está viendo su lista de tareas pendientes
+        if (jugadorActualLocal && jugadorActualLocal.rol === 'Tripulante' && currentScreenId === 'screen-rol') {
+            inyectarTareasJugador(jugadorActualLocal);
+        }
+        
+        // 4. Si el admin está en el panel de control viendo la lista de links
+        if (currentScreenId === "screen-admin") {
+            inyectarMisionesControlAdmin();
+        }
+    });
+
+    function guardarEnFirebase() {
+        db.ref("partida_among_us").set(partida);
+    }
+
+    function generarCodigoAlAzar() {
+        const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; 
+        let resultado = "";
+        for (let i = 0; i < 4; i++) {
+            resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+        }
+        if (partida.jugadores.some(j => j.codigo === resultado)) {
+            return generarCodigoAlAzar();
+        }
+        return resultado;
+    }
+
+    function regenerarCodigosAzar() {
+        if (confirm("¿Quieres cambiar los PINs de acceso de todos los monitores por unos nuevos al azar?")) {
+            partida.jugadores.forEach(j => {
+                j.codigo = generarCodigoAlAzar(); j.rol = "pendiente"; j.vivo = true;
+                j.tareas = { 1: { hecho: false, foto: "" }, 2: { hecho: false, foto: "" }, 3: { hecho: false, foto: "" }, 4: { hecho: false, foto: "" }, 5: { hecho: false, foto: "" } };
+                j.penalizacionAsesinarHasta = 0; j.historialAsesinatos = [];
+            });
+            partida.rolesAsignados = false;
+            partida.sabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            partida.historialSabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            localStorage.removeItem('sesion_activa_among_us');
+            guardarEnFirebase();
+            alert("¡PINs regenerados en la nube!");
+        }
+    }
+
+    function gmAñadirParticipante() {
+        const input = document.getElementById('gmNuevoNombreInput');
+        const nombre = input.value.trim();
+        if (!nombre) { alert("Escribe un nombre válido."); return; }
+
+        const nuevoJugador = {
+            codigo: generarCodigoAlAzar(), nombre: nombre, rol: "pendiente", vivo: true,
+            tareas: { 1: { hecho: false, foto: "" }, 2: { hecho: false, foto: "" }, 3: { hecho: false, foto: "" }, 4: { hecho: false, foto: "" }, 5: { hecho: false, foto: "" } },
+            penalizacionAsesinarHasta: 0, historialAsesinatos: []
+        };
+
+        partida.jugadores.push(nuevoJugador);
+        partida.rolesAsignados = false; 
+        guardarEnFirebase();
+        input.value = "";
+    }
+
+    function gmQuitarParticipante(index) {
+        if (confirm(`¿Quieres quitar a este monitor de la base de datos?`)) {
+            partida.jugadores.splice(index, 1);
+            partida.rolesAsignados = false;
+            guardarEnFirebase();
+        }
+    }
+
+    function gmRenderListaParticipantes() {
+        const box = document.getElementById('gmListParticipantes');
+        box.innerHTML = '';
+        if (!partida.jugadores || partida.jugadores.length === 0) {
+            box.innerHTML = '<p style="text-align:center; color:#747d8c; margin:0;">No hay participantes registrados.</p>';
+            return;
+        }
+        partida.jugadores.forEach((j, index) => {
+            box.innerHTML += `
+                <div class="gm-list-row">
+                    <span><strong>PIN: ${j.codigo}</strong> - ${j.nombre}</span>
+                    <button onclick="gmQuitarParticipante(${index})" style="width:auto; margin:0; padding:2px 6px; font-size:0.7rem; background-color:var(--impostor-color);">❌ Quitar</button>
+                </div>
+            `;
+        });
+    }
+
+    function generarPartida(mostrarAlerta = false) {
+        const total = partida.jugadores.length;
+        if (total < 4) { alert("Necesitas al menos 4 participantes registrados."); return; }
+
+        let numImpostores = Math.max(1, Math.floor(total * 0.25));
+        let numTripulantes = total - numImpostores;
+        let roles = Array(numImpostores).fill("Impostor").concat(Array(numTripulantes).fill("Tripulante"));
+        
+        for (let i = roles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [roles[i], roles[j]] = [roles[j], roles[i]];
+        }
+
+        partida.jugadores.forEach((jugador, index) => {
+            jugador.rol = roles[index]; jugador.vivo = true;
+            jugador.tareas = { 1: { hecho: false, foto: "" }, 2: { hecho: false, foto: "" }, 3: { hecho: false, foto: "" }, 4: { hecho: false, foto: "" }, 5: { hecho: false, foto: "" } };
+            jugador.penalizacionAsesinarHasta = 0; jugador.historialAsesinatos = [];
+        });
+
+        partida.sabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        partida.historialSabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        partida.rolesAsignados = true;
+        guardarEnFirebase();
+    }
+
+    window.onload = function() {
+        const sesionPrevia = localStorage.getItem('sesion_activa_among_us');
+        const urlParams = new URLSearchParams(window.location.search);
+        const lugarParam = urlParams.get('lugar');
+        
+        if (lugarParam && misionesDefinidas[lugarParam]) {
+            misionActualEscaneada = parseInt(lugarParam);
+            if (sesionPrevia) {
+                // Pequeño retardo para asegurar que Firebase haya cargado los datos remotos
+                setTimeout(() => {
+                    const jugador = partida.jugadores.find(j => j.codigo === sesionPrevia);
+                    if (jugador) {
+                        jugadorActualLocal = jugador;
+                        if (!jugador.vivo) {
+                            mostrarRolPantalla(jugador); return;
+                        }
+                        abrirMisionSegunRol(jugador, misionActualEscaneada);
+                    }
+                }, 1000);
+                return;
+            }
+            document.getElementById('loginInstrucciones').innerHTML = `🚨 <strong style="color: var(--accent-color)">Misión detectada: ${misionesDefinidas[misionActualEscaneada].titulo}</strong>.<br>Introduce tu PIN para acceder:`;
+        } else {
+            if (sesionPrevia) {
+                setTimeout(() => {
+                    const jugador = partida.jugadores.find(j => j.codigo === sesionPrevia);
+                    if (jugador) {
+                        jugadorActualLocal = jugador;
+                        mostrarRolPantalla(jugador);
+                    }
+                }, 1000);
+            }
+        }
+    };
+
+    function intentarAccesoAdmin() {
+        const pass = prompt("Introduce la contraseña de Coordinador:");
+        if (pass === "gingerquike") { irPantalla('screen-admin'); } else { alert("Acceso denegado."); }
+    }
+
+    function reiniciarNombres() {
+        if(confirm("¿Seguro que quieres limpiar las asignaciones de nombres?")) {
+            partida.jugadores.forEach(j => {
+                j.nombre = "Sin asignar"; j.vivo = true; j.rol = "pendiente";
+                j.tareas = { 1: { hecho: false, foto: "" }, 2: { hecho: false, foto: "" }, 3: { hecho: false, foto: "" }, 4: { hecho: false, foto: "" }, 5: { hecho: false, foto: "" } };
+                j.penalizacionAsesinarHasta = 0; j.historialAsesinatos = [];
+            });
+            partida.rolesAsignados = false;
+            partida.sabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            partida.historialSabotajes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            localStorage.removeItem('sesion_activa_among_us');
+            guardarEnFirebase();
+            location.reload();
+        }
+    }
+
+    function irPantalla(idPantalla) {
+        if (timerInterval) clearInterval(timerInterval);
+        currentScreenId = idPantalla;
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(idPantalla).classList.add('active');
+        
+        if(idPantalla === 'screen-admin') {
+            actualizarTablaAdmin(); inyectarMisionesControlAdmin(); cargarEditorMisiones(); gmRenderListaParticipantes();
+        } else if (idPantalla === 'screen-registro') {
+            inyectarNombresDesplegableRegistro();
+        }
+    }
+
+    function inyectarNombresDesplegableRegistro() {
+        const select = document.getElementById('selectNombre');
+        select.innerHTML = '<option value="" disabled selected>-- Elige tu nombre --</option>';
+        partida.jugadores.forEach(j => {
+            select.innerHTML += `<option value="${j.nombre}">${j.nombre}</option>`;
+        });
+    }
+
+    function cerrarSesion() {
+        if (killTimerInterval) clearInterval(killTimerInterval);
+        localStorage.removeItem('sesion_activa_among_us');
+        jugadorActualLocal = null; misionActualEscaneada = null;
+        window.history.replaceState({}, document.title, window.location.pathname);
+        document.getElementById('loginInstrucciones').innerText = "Introduce tu PIN de 4 dígitos:";
+        irPantalla('screen-login');
+    }
+
+    function cargarEditorMisiones() {
+        const container = document.getElementById('editorMisionesContainer');
+        container.innerHTML = '';
+        Object.keys(misionesDefinidas).forEach(num => {
+            const m = misionesDefinidas[num];
+            container.innerHTML += `
+                <div class="editor-mision-block">
+                    <span class="editor-label">📍 LUGAR / TÍTULO DE MISIÓN ${num}:</span>
+                    <input type="text" id="edit-titulo-${num}" value="${m.titulo}" style="text-align:left; letter-spacing:0px; font-weight:normal;">
+                    <span class="editor-label">📝 EXPLICACIÓN DE LA MISIÓN:</span>
+                    <textarea id="edit-explicacion-${num}">${m.explicacion}</textarea>
+                </div>
+            `;
+        });
+    }
+
+    function guardarEdicionMisiones() {
+        Object.keys(misionesDefinidas).forEach(num => {
+            const nuevoTitulo = document.getElementById(`edit-titulo-${num}`).value.trim();
+            const nuevaExplicacion = document.getElementById(`edit-explicacion-${num}`).value.trim();
+            if (nuevoTitulo && nuevaExplicacion) {
+                misionesDefinidas[num].titulo = nuevoTitulo;
+                misionesDefinidas[num].explicacion = nuevaExplicacion;
+            }
+        });
+        db.ref("misiones_among_us").set(misionesDefinidas);
+        alert("¡Misiones actualizadas!");
+    }
+
+    function inyectarMisionesControlAdmin() {
+        const contenedor = document.getElementById('listaMisionesAdmin');
+        contenedor.innerHTML = '';
+        const urlBase = window.location.origin + window.location.pathname;
+
+        Object.keys(misionesDefinidas).forEach(num => {
+            const m = misionesDefinidas[num];
+            const urlMision = `${urlBase}?lugar=${num}`;
+            const ahora = Date.now();
+            const saboteada = partida.sabotajes && partida.sabotajes[num] > ahora;
+            let estadoSabotaje = '';
+            if (saboteada) {
+                const minsRestantes = Math.ceil((partida.sabotajes[num] - ahora) / 60000);
+                estadoSabotaje = `<span style="color:var(--impostor-color); font-size:0.75rem; display:block;">🚨 SABOTEADA (${minsRestantes} min)</span>`;
+            }
+
+            contenedor.innerHTML += `
+                <div class="admin-mision-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <span style="font-weight: bold; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.titulo}</span>
+                        <div class="admin-mision-buttons">
+                            <button class="secondary" onclick="window.open('${urlMision}', '_blank')">🔗 Abrir</button>
+                            <button onclick="copiarEnlaceMision('${urlMision}')">📋 Copiar</button>
+                        </div>
+                    </div>
+                    ${estadoSabotaje}
+                    ${saboteada ? `<button class="success" onclick="cancelarSabotajeAdmin(${num})" style="width:auto; padding:2px 6px; font-size:0.7rem; margin-top:2px;">⚡ Reparar Sabotaje</button>` : ''}
+                </div>
+            `;
+        });
+    }
+
+    function cancelarSabotajeAdmin(num) {
+        partida.sabotajes[num] = 0;
+        guardarEnFirebase();
+    }
+
+    function copiarEnlaceMision(url) {
+        navigator.clipboard.writeText(url).then(() => { alert("¡Copiado!"); });
+    }
+
+    function eliminarJugadorAdmin(pin) {
+        const jugador = partida.jugadores.find(j => j.codigo === pin);
+        if (jugador && confirm(`¿Seguro que quieres eliminar a ${jugador.nombre}?`)) {
+            jugador.vivo = false;
+            guardarEnFirebase();
+        }
+    }
+
+    function actualizarTablaAdmin() {
+        if(!partida.jugadores) return;
+        const listaImpostores = partida.jugadores.filter(j => j.role === 'Impostor' || j.rol === 'Impostor').map(j => `${j.codigo} (${j.nombre})`);
+        document.getElementById('pinsImpostores').innerHTML = listaImpostores.length > 0 ? listaImpostores.join('<br>') : 'Ninguno';
+
+        const tbody = document.getElementById('cuerpoTabla');
+        tbody.innerHTML = '';
+        partida.jugadores.forEach(j => {
+            let colorRol = j.rol === 'Impostor' ? 'var(--impostor-color)' : 'var(--crew-color)';
+            let tareasHechas = 0;
+            if (j.rol === 'Tripulante' && j.tareas) {
+                Object.values(j.tareas).forEach(t => { if (t.hecho) tareasHechas++; });
+            }
+            let tareasTexto = j.rol === 'Tripulante' ? `${tareasHechas} / 5` : 'N/A';
+            let estadoVital = j.vivo ? `<span style="color:var(--crew-color); font-weight:bold;">VIVO</span>` : `<span style="color:var(--impostor-color); font-weight:bold;">☠️ FANTASMA</span>`;
+            let botonEliminarAdmin = j.vivo ? `<button onclick="eliminarJugadorAdmin('${j.codigo}')" style="background-color:var(--impostor-color); padding:3px 6px; font-size:0.7rem; width:auto; margin:0 0 0 5px;">💥 Eliminar</button>` : '';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong style="letter-spacing: 1px;">${j.codigo}</strong></td>
+                    <td>${j.nombre}</td>
+                    <td style="color: ${colorRol}; font-weight: bold;">${j.rol.toUpperCase()}</td>
+                    <td>${estadoVital} ${botonEliminarAdmin}</td>
+                    <td>
+                        ${tareasTexto}
+                        ${tareasHechas > 0 ? `<button onclick="verFotosDeJugador('${j.codigo}')" style="padding:2px 5px; font-size:0.7rem; width:auto; margin:0 0 0 5px;">👀 Fotos</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function verFotosDeJugador(pin) {
+        const jugador = partida.jugadores.find(j => j.codigo === pin);
+        const visor = document.getElementById('visorFotosAdmin');
+        const contenido = document.getElementById('visorContenido');
+        contenido.innerHTML = '';
+
+        Object.keys(jugador.tareas).forEach(num => {
+            const t = jugador.tareas[num];
+            if (t.hecho && t.foto) {
+                const nombreArchivo = `${jugador.nombre}_Lugar_${num}.png`;
+                contenido.innerHTML += `
+                    <div style="margin-bottom: 25px; border-bottom: 1px dashed var(--border-color); padding-bottom: 20px;">
+                        <h4 style="color: var(--crew-color); margin-bottom: 5px;">${misionesDefinidas[num].titulo}</h4>
+                        <img src="${t.foto}" style="max-width:100%; max-height:250px; border-radius:5px; border:1px solid var(--border-color); display:block; margin: 10px auto;"><br>
+                        <div style="display:flex; gap:10px; max-width:300px; margin:0 auto;">
+                            <button class="success" onclick="descargarFotoMision('${t.foto}', '${nombreArchivo}')" style="padding: 6px; font-size:0.8rem; margin:0;">📥 Descargar</button>
+                            <button onclick="eliminarFotoMision('${pin}', ${num})" style="padding: 6px; font-size:0.8rem; background-color: var(--impostor-color); margin:0;">Rechazar</button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        visor.style.display = 'block';
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function descargarFotoMision(base64Data, nombreArchivo) {
+        const linkDescarga = document.createElement("a");
+        linkDescarga.href = base64Data; linkDescarga.download = nombreArchivo;
+        document.body.appendChild(linkDescarga); linkDescarga.click(); document.body.removeChild(linkDescarga);
+    }
+
+    function eliminarFotoMision(pin, numMision) {
+        if (confirm("¿Invalidar esta foto?")) {
+            const jugador = partida.jugadores.find(j => j.codigo === pin);
+            jugador.tareas[numMision].hecho = false; jugador.tareas[numMision].foto = "";
+            guardarEnFirebase();
+            document.getElementById('visorFotosAdmin').style.display = 'none';
+        }
+    }
+
+    function comprobarCodigo() {
+        const input = document.getElementById('codigoInput').value.replace(/\s+/g, '').toUpperCase();
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.innerText = "";
+
+        const jugador = partida.jugadores.find(j => j.codigo === input);
+        if (!jugador) { errorDiv.innerText = "PIN NO VÁLIDO."; return; }
+
+        if (misionActualEscaneada && !jugador.vivo) {
+            alert("💥 ACCESO COMPROMETIDO: Terminal destruida. Estás eliminado.");
+            misionActualEscaneada = null;
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        jugadorActualLocal = jugador;
+        localStorage.setItem('sesion_activa_among_us', jugador.codigo);
+
+        if (!jugador.nombre || jugador.nombre === "Sin asignar") {
+            deshabilitarNombresOcupados(); irPantalla('screen-registro'); 
+        } else {
+            if (misionActualEscaneada) {
+                abrirMisionSegunRol(jugador, misionActualEscaneada);
+            } else {
+                mostrarRolPantalla(jugador);
+            }
+        }
+        document.getElementById('codigoInput').value = "";
+    }
+
+    function deshabilitarNombresOcupados() {
+        const select = document.getElementById('selectNombre');
+        select.selectedIndex = 0;
+        const nombresAsignados = partida.jugadores.map(j => j.nombre);
+        Array.from(select.options).forEach(option => {
+            if (option.value !== "") {
+                if (nombresAsignados.includes(option.value)) {
+                    option.disabled = true; option.text = option.value + " (Ocupado)";
+                } else {
+                    option.disabled = false; option.text = option.value;
+                }
+            }
+        });
+    }
+
+    function guardarNombreYVerRol() {
+        const select = document.getElementById('selectNombre');
+        const nombreSeleccionado = select.value;
+        if (!nombreSeleccionado) { alert("Selecciona tu nombre."); return; }
+
+        jugadorActualLocal.nombre = nombreSeleccionado;
+        
+        // Sincronizar el nombre en el array central de jugadores
+        const idx = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
+        if(idx !== -1) partida.jugadores[idx].nombre = nombreSeleccionado;
+
+        guardarEnFirebase();
+
+        if (misionActualEscaneada) {
+            abrirMisionSegunRol(jugadorActualLocal, misionActualEscaneada);
+        } else {
+            mostrarRolPantalla(jugadorActualLocal);
+        }
+    }
+
+    function abrirMisionSegunRol(jugador, numMision) {
+        if (jugador.rol === 'Impostor') {
+            evaluarYActivarSabotajeImpostor(numMision);
+        } else {
+            comprobarYAbriMisionTripulante(numMision);
+        }
+    }
+
+    function ejecutarAsesinato() {
+        const pinVictima = document.getElementById('pinVictimaInput').value.replace(/\s+/g, '').toUpperCase();
+        if (!pinVictima) { alert("Introduce un PIN."); return; }
+
+        const compañeroImpostor = partida.jugadores.find(j => j.codigo === pinVictima && j.rol === 'Impostor');
+        if (compañeroImpostor) {
+            alert("🚨 SABOTAJE COMPROMETIDO: Fuego amigo desactivado.");
+            document.getElementById('pinVictimaInput').value = ""; return;
+        }
+
+        const ahora = Date.now();
+        if (!jugadorActualLocal.historialAsesinatos) jugadorActualLocal.historialAsesinatos = [];
+
+        const veinticuatroHorasMs = 24 * 60 * 60 * 1000;
+        const bajasRecientes = jugadorActualLocal.historialAsesinatos.filter(t => (ahora - t) < veinticuatroHorasMs);
+        if (bajasRecientes.length >= 2) {
+            alert("⚠️ LÍMITE ALCANZADO: Máximo 2 bajas cada 24 horas.");
+            document.getElementById('pinVictimaInput').value = ""; return;
+        }
+
+        const victima = partida.jugadores.find(j => j.codigo === pinVictima);
+        if (!victima || !victima.vivo) {
+            const doceHorasMs = 12 * 60 * 60 * 1000;
+            // Guardamos la penalización en el jugador local y en el registro global
+            jugadorActualLocal.penalizacionAsesinarHasta = ahora + doceHorasMs;
+            const idx = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
+            if(idx !== -1) partida.jugadores[idx].penalizacionAsesinarHasta = ahora + doceHorasMs;
+
+            guardarEnFirebase();
+            alert("💥 ¡SISTEMA FALLIDO! PIN erróneo o ya eliminado. Consola bloqueada 12 horas.");
+            document.getElementById('pinVictimaInput').value = "";
+            comprobarCooldownAsesinato(); return;
+        }
+
+        victima.vivo = false; 
+        jugadorActualLocal.historialAsesinatos.push(ahora);
+        
+        const idxImp = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
+        if(idxImp !== -1) partida.jugadores[idxImp].historialAsesinatos = jugadorActualLocal.historialAsesinatos;
+
+        guardarEnFirebase();
+        alert(`💀 ¡ELIMINADO! Has neutralizado a ${victima.nombre}.`);
+        document.getElementById('pinVictimaInput').value = "";
+        comprobarCooldownAsesinato();
+    }
+
+    function comprobarCooldownAsesinato() {
+        if (killTimerInterval) clearInterval(killTimerInterval);
+        const formulario = document.getElementById('bloqueFormularioAsesinar');
+        const visualTimer = document.getElementById('timerBloqueoAsesinar');
+
+        function actualizarContador() {
+            const ahora = Date.now();
+            const penalizacion = jugadorActualLocal.penalizacionAsesinarHasta || 0;
+            
+            if (penalizacion > ahora) {
+                formulario.style.display = "none"; visualTimer.style.display = "block";
+                const diffActual = penalizacion - ahora;
+                const horas = Math.floor(diffActual / (1000 * 60 * 60));
+                const minutos = Math.floor((diffActual % (1000 * 60 * 60)) / (1000 * 60));
+                const segundos = Math.floor((diffActual % (1000 * 60)) / 1000);
+                visualTimer.innerHTML = `<span style="color:var(--impostor-color); font-weight:bold;">🔒 CONSOLA BLOQUEADA</span><br>Reactivación en:<br><span style="font-size:1.3rem; font-weight:bold;">${horas.toString().padStart(2,'0')}:${minutos.toString().padStart(2,'0')}:${segundos.toString().padStart(2,'0')}</span>`;
+                return;
+            }
+
+            if (!jugadorActualLocal.historialAsesinatos) jugadorActualLocal.historialAsesinatos = [];
+            const veinticuatroHorasMs = 24 * 60 * 60 * 1000;
+            const bajasRecientes = jugadorActualLocal.historialAsesinatos.filter(t => (ahora - t) < veinticuatroHorasMs);
+
+            if (bajasRecientes.length >= 2) {
+                formulario.style.display = "none"; visualTimer.style.display = "block";
+                const tiempoDesbloqueo = bajasRecientes[0] + veinticuatroHorasMs;
+                const diff = tiempoDesbloqueo - ahora;
+                const horas = Math.floor(diff / (1000 * 60 * 60));
+                const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const segundos = Math.floor((diff % (1000 * 60)) / 1000);
+                visualTimer.innerHTML = `<span style="color:var(--accent-color); font-weight:bold;">⚡ ARMA OVERLOAD (2/2 BAJAS)</span><br>Límite diario. Recarga en:<br><span style="font-size:1.3rem; font-weight:bold;">${horas.toString().padStart(2,'0')}:${minutos.toString().padStart(2,'0')}:${segundos.toString().padStart(2,'0')}</span>`;
+                return;
+            }
+
+            formulario.style.display = "block"; visualTimer.style.display = "none";
+            clearInterval(killTimerInterval);
+        }
+        actualizarContador();
+        killTimerInterval = setInterval(actualizarContador, 1000);
+    }
+
+    function evaluarYActivarSabotajeImpostor(numMision) {
+        const ahora = Date.now();
+        const m = misionesDefinidas[numMision];
+
+        let yaHaySabotajeActivo = false;
+        if (partida.sabotajes) {
+            Object.values(partida.sabotajes).forEach(timestamp => { if (timestamp > ahora) yaHaySabotajeActivo = true; });
+        }
+
+        if (yaHaySabotajeActivo && (!partida.sabotajes[numMision] || partida.sabotajes[numMision] <= ahora)) {
+            document.getElementById('misionTitulo').innerText = "❌ SABOTAJE DENEGADO";
+            document.getElementById('misionExplicacion').innerHTML = `<div style="text-align:center;"><span style="color: var(--impostor-color); font-weight:bold; font-size:1.1rem; display:block; margin-bottom:15px;">🚨 ERROR DE RED 🚨</span>Ya hay un sabotaje activo ejecutándose en la nave.</div>`;
+            document.getElementById('misionFormulario').innerHTML = ''; irPantalla('screen-mision'); return;
+        }
+
+        const penalizacionSeisHoras = partida.historialSabotajes ? partida.historialSabotajes[numMision] : 0;
+        if (penalizacionSeisHoras > ahora && (!partida.sabotajes[numMision] || partida.sabotajes[numMision] <= ahora)) {
+            const diffMs = penalizacionSeisHoras - ahora;
+            const horas = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById('misionTitulo').innerText = "⏳ SECTOR EN RECARGA";
+            document.getElementById('misionExplicacion').innerHTML = `<div style="text-align:center;"><span style="color: var(--accent-color); font-weight:bold; font-size:1.1rem; display:block; margin-bottom:15px;">⚡ SOBRECALENTAMIENTO ⚡</span>Espera:<br><br><span style="font-size:1.6rem; font-weight:bold; color:var(--impostor-color);">${horas}h y ${minutos}m</span></div>`;
+            document.getElementById('misionFormulario').innerHTML = ''; irPantalla('screen-mision'); return;
+        }
+
+        if (partida.sabotajes && partida.sabotajes[numMision] > ahora) {
+            mostrarPantallaRelojCompartido(numMision, partida.sabotajes[numMision], true); return;
+        }
+
+        const treintaMinutos = 30 * 60 * 1000;
+        const seisHoras = 6 * 60 * 60 * 1000;
+
+        partida.sabotajes[numMision] = ahora + treintaMinutos;
+        partida.historialSabotajes[numMision] = ahora + seisHoras;
+        guardarEnFirebase();
+
+        mostrarPantallaRelojCompartido(numMision, partida.sabotajes[numMision], true);
+    }
+
+    function comprobarYAbriMisionTripulante(numMision) {
+        const ahora = Date.now();
+        const tiempoFinalSabotaje = partida.sabotajes ? partida.sabotajes[numMision] : 0;
+
+        if (tiempoFinalSabotaje > ahora) {
+            mostrarPantallaRelojCompartido(numMision, tiempoFinalSabotaje, false);
+        } else {
+            abrirPantallaMisionNormal(numMision);
+        }
+    }
+
+    function mostrarPantallaRelojCompartido(numMision, tiempoFinal, esImpostor) {
+        if (timerInterval) clearInterval(timerInterval);
+        const m = misionesDefinidas[numMision];
+        document.getElementById('misionTitulo').innerText = esImpostor ? "⚠️ SECTOR CONFIGURADO" : "🚨 SECTOR INACCESIBLE";
+        document.getElementById('misionFormulario').innerHTML = ''; irPantalla('screen-mision');
+
+        function actualizarReloj() {
+            const ahora = Date.now();
+            const diferencia = tiempoFinal - ahora;
+
+            if (diferencia <= 0) {
+                clearInterval(timerInterval);
+                if (esImpostor) {
+                    document.getElementById('misionExplicacion').innerHTML = `<p style="text-align:center;">El sabotaje ha finalizado.</p>`;
+                } else {
+                    abrirPantallaMisionNormal(numMision);
+                }
+                return;
+            }
+
+            const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+            const cabecera = esImpostor 
+                ? `🛰️ CONTROL DE SABOTAJE (IMPOSTOR) 🛰️<br><br>Has bloqueado la consola de <strong>${m.titulo}</strong>. Se disipará en:`
+                : `🔴 ALERTA DE SABOTAJE (TRIPULANTE) 🔴<br><br>El sector de <strong>${m.titulo}</strong> ha sido saboteado. Operativo en:`;
+
+            document.getElementById('misionExplicacion').innerHTML = `
+                <div style="text-align:center;">
+                    ${cabecera}<br><br>
+                    <div style="font-size:2rem; font-weight:bold; color:var(--impostor-color); letter-spacing:2px;">
+                        ${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}
+                    </div>
+                </div>
+            `;
+        }
+        actualizarReloj(); 
+        timerInterval = setInterval(actualizarReloj, 1000); 
+    }
+
+    function abrirPantallaMisionNormal(numMision) {
+        if (timerInterval) clearInterval(timerInterval);
+        const m = misionesDefinidas[numMision];
+        document.getElementById('misionTitulo').innerText = m.titulo;
+        document.getElementById('misionExplicacion').innerText = m.explicacion;
+        fotoBase64Temporal = "";
+
+        const yaHecha = jugadorActualLocal.tareas && jugadorActualLocal.tareas[numMision] ? jugadorActualLocal.tareas[numMision].hecho : false;
+        const form = document.getElementById('misionFormulario');
+
+        if (yaHecha) {
+            form.innerHTML = `<p style="color: var(--crew-color); font-weight: bold; text-align: center;">✅ ¡Misión enviada con éxito!</p>`;
+        } else {
+            form.innerHTML = `
+                <p style="color: var(--accent-color); font-weight: bold; text-align: center;">📸 Haz una foto en este momento para verificar la misión:</p>
+                <input type="file" id="misionFoto" accept="image/*" capture="environment" onchange="previewImage(event)">
+                <img id="imgPreview" alt="Previsualización" style="max-width: 100%; max-height: 200px; margin: 10px 0; border: 1px solid var(--border-color); border-radius: 5px; display: none;">
+                <button onclick="enviarMision()">ENVIAR COMPROBACIÓN</button>
+            `;
+        }
+        irPantalla('screen-mision');
+    }
+
+    function mostrarRolPantalla(jugador) {
+        document.getElementById('nombreUsuario').innerText = jugador.nombre;
+        const cajaRol = document.getElementById('cajaRol');
+        const listaTareas = document.getElementById('listaTareasTripulante');
+        const alertaMuerte = document.getElementById('alertaMuerteTripulante');
+        const seccionAsesinar = document.getElementById('seccionAsesinarImpostor');
+        const panelVivo = document.getElementById('contenidoPanelVivo');
+
+        if (!jugador.vivo) {
+            alertaMuerte.style.display = "block"; panelVivo.style.display = "none";
+        } else {
+            alertaMuerte.style.display = "none"; panelVivo.style.display = "block";
+        }
+
+        if (jugador.rol === 'Impostor') {
+            listaTareas.style.display = 'none'; seccionAsesinar.style.display = 'block'; 
+            comprobarCooldownAsesinato(); 
+
+            const otrosImpostores = partida.jugadores
+                .filter(j => j.rol === 'Impostor' && j.codigo !== jugador.codigo)
+                .map(j => `PIN: <strong>${j.codigo}</strong> (${j.nombre})`);
+
+            cajaRol.className = "resultado impostor-box";
+            cajaRol.innerHTML = `
+                Estatus: <strong style="color: var(--impostor-color)">IMPOSTOR</strong><br><br>
+                💀 Tu objetivo es sabotear y eliminar a la tripulación.
+                <div class="aliados-box">
+                    <span style="color: var(--impostor-color); font-weight: bold; display: block; margin-bottom: 5px;">👥 TUS COMPAÑEROS IMPOSTORES:</span>
+                    • ${otrosImpostores[0] || 'Ninguno'}<br>
+                    • ${otrosImpostores[1] || 'Ninguno'}
+                </div>
+            `;
+        } else if (jugador.rol === 'Tripulante') {
+            seccionAsesinar.style.display = 'none'; listaTareas.style.display = 'block';
+            inyectarTareasJugador(jugador);
+            cajaRol.className = "resultado tripulante-box";
+            cajaRol.innerHTML = `Estatus: <strong style="color: var(--crew-color)">TRIPULANTE</strong><br><br>🛠️ Completa tus misiones y mantente alerta.`;
+        }
+        irPantalla('screen-rol');
+    }
+
+    function inyectarTareasJugador(jugador) {
+        const container = document.getElementById('tasksContainer');
+        container.innerHTML = '';
+        Object.keys(misionesDefinidas).forEach(num => {
+            const misionInfo = misionesDefinidas[num];
+            const completada = jugador.tareas && jugador.tareas[num] ? jugador.tareas[num].hecho : false;
+            const statusClass = completada ? 'status-completada' : 'status-pendiente';
+            const statusTexto = completada ? 'COMPLETADA' : 'PENDIENTE';
+            container.innerHTML += `
+                <div class="task-item">
+                    <div><strong>${misionInfo.titulo}</strong></div>
+                    <span class="task-status ${statusClass}">${statusTexto}</span>
+                </div>
+            `;
+        });
+    }
+
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('imgPreview'); output.src = reader.result; output.style.display = 'block';
+            fotoBase64Temporal = reader.result; 
+        };
+        if (event.target.files[0]) reader.readAsDataURL(event.target.files[0]);
+    }
+
+    function enviarMision() {
+        if (!fotoBase64Temporal) { alert("Sube una foto."); return; }
+        
+        const idx = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
+        if(idx !== -1) {
+            partida.jugadores[idx].tareas[misionActualEscaneada].hecho = true;
+            partida.jugadores[idx].tareas[misionActualEscaneada].foto = fotoBase64Temporal;
+        }
+        
+        guardarEnFirebase();
+        alert("¡Misión enviada correctamente!");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        misionActualEscaneada = null;
+        mostrarRolPantalla(jugadorActualLocal);
+    }
+
+    function cancelarMision() {
+        if (timerInterval) clearInterval(timerInterval);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        misionActualEscaneada = null;
+        mostrarRolPantalla(jugadorActualLocal);
+    }
+</script>
+
+</body>
+</html>
