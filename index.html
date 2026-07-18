@@ -1239,13 +1239,52 @@
         });
     }
 
-    function previewImage(event) {
+function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
         const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('imgPreview'); output.src = reader.result; output.style.display = 'block';
-            fotoBase64Temporal = reader.result; 
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Crear un canvas para redimensionar la imagen
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Resolución máxima amigable para la BD
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                // Calcular la nueva proporción
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                // Dibujar la imagen redimensionada
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Comprimir la imagen a JPEG con calidad 0.6 (60%)
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
+                // Mostrar previsualización y guardar el base64 comprimido
+                const output = document.getElementById('imgPreview'); 
+                output.src = compressedBase64; 
+                output.style.display = 'block';
+                fotoBase64Temporal = compressedBase64; 
+            };
+            img.src = e.target.result;
         };
-        if (event.target.files[0]) reader.readAsDataURL(event.target.files[0]);
+        reader.readAsDataURL(file);
     }
 
     function enviarMision() {
