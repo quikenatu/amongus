@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -876,15 +876,13 @@
 
         // El coordinador descarga las fotos solo bajo demanda
         db.ref(`fotos_misiones/${pin}`).once('value').then((snapshot) => {
-            const fotosNuevas = snapshot.val() || {};
+            const fotos = snapshot.val() || {};
             contenido.innerHTML = '';
             
             let hayFotos = false;
             Object.keys(jugador.tareas).forEach(num => {
                 const t = jugador.tareas[num];
-                
-                // MAGIA AQUÍ: Buscamos la foto en la ruta nueva, y si no está, usamos la antigua (t.foto)
-                const fotoBase64 = fotosNuevas[`mision_${num}`] || t.foto; 
+                const fotoBase64 = fotos[`mision_${num}`]; // Extraemos la foto de la nueva ruta
 
                 if (t.hecho && fotoBase64) {
                     hayFotos = true;
@@ -901,14 +899,6 @@
                     `;
                 }
             });
-            
-            if (!hayFotos) {
-                contenido.innerHTML = '<p style="text-align:center; color:#747d8c;">No hay fotos registradas para este jugador.</p>';
-            }
-        }).catch(error => {
-            contenido.innerHTML = '<p style="color:var(--impostor-color); text-align:center;">Error al cargar las fotos. Comprueba tu conexión.</p>';
-        });
-    }
             
             if (!hayFotos) {
                 contenido.innerHTML = '<p style="text-align:center; color:#747d8c;">No hay fotos registradas para este jugador.</p>';
