@@ -1292,9 +1292,27 @@ function previewImage(event) {
         
         const idx = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
         if(idx !== -1) {
+            // 1. Actualizamos los datos en el móvil (en local)
             partida.jugadores[idx].tareas[misionActualEscaneada].hecho = true;
             partida.jugadores[idx].tareas[misionActualEscaneada].foto = fotoBase64Temporal;
+            
+            // 2. EL TRUCO ESTÁ AQUÍ: Solo enviamos a Firebase esta misión específica, no el juego entero
+            const rutaMision = `partida_among_us/jugadores/${idx}/tareas/${misionActualEscaneada}`;
+            db.ref(rutaMision).update({
+                hecho: true,
+                foto: fotoBase64Temporal
+            }).then(() => {
+                // 3. Todo ha ido bien, cerramos la pantalla de la misión
+                alert("¡Misión enviada correctamente!");
+                window.history.replaceState({}, document.title, window.location.pathname);
+                misionActualEscaneada = null;
+                mostrarRolPantalla(jugadorActualLocal);
+            }).catch((error) => {
+                alert("Hubo un corte de red. Inténtalo de nuevo.");
+                console.error(error);
+            });
         }
+    }
         
         guardarEnFirebase();
         alert("¡Misión enviada correctamente!");
