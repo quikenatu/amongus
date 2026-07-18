@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -456,14 +456,14 @@
     // CONFIGURACIÓN DE FIREBASE (PON TUS DATOS AQUÍ)
     // ==========================================
     const firebaseConfig = {
-  apiKey: "AIzaSyAR2TSeuZePkum0txTGscbLaxxnXnnZIos",
-  authDomain: "amongus-31e83.firebaseapp.com",
-  databaseURL: "https://amongus-31e83-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "amongus-31e83",
-  storageBucket: "amongus-31e83.firebasestorage.app",
-  messagingSenderId: "68530531796",
-  appId: "1:68530531796:web:b1f67388307d606765ba41"
-};
+      apiKey: "AIzaSyAR2TSeuZePkum0txTGscbLaxxnXnnZIos",
+      authDomain: "amongus-31e83.firebaseapp.com",
+      databaseURL: "https://amongus-31e83-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "amongus-31e83",
+      storageBucket: "amongus-31e83.firebasestorage.app",
+      messagingSenderId: "68530531796",
+      appId: "1:68530531796:web:b1f67388307d606765ba41"
+    };
 
     // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
@@ -544,8 +544,6 @@
             db.ref("misiones_among_us").set(misionesDefecto);
         }
 
-        // --- FIX: Actualizar la interfaz en cuanto lleguen los textos editados de Firebase ---
-        
         // 1. Si el jugador está en la pantalla de Login tras escanear el QR
         if (misionActualEscaneada && currentScreenId === 'screen-login' && !localStorage.getItem('sesion_activa_among_us')) {
             document.getElementById('loginInstrucciones').innerHTML = `🚨 <strong style="color: var(--accent-color)">Misión detectada: ${misionesDefinidas[misionActualEscaneada].titulo}</strong>.<br>Introduce tu PIN para acceder:`;
@@ -556,7 +554,6 @@
             const m = misionesDefinidas[misionActualEscaneada];
             const tituloDOM = document.getElementById('misionTitulo');
             
-            // Solo actualizamos si no es una pantalla de sabotaje activo (para no borrar las alertas rojas)
             if (!tituloDOM.innerText.includes("SABOTAJE") && !tituloDOM.innerText.includes("SECTOR")) {
                 tituloDOM.innerText = m.titulo;
                 document.getElementById('misionExplicacion').innerText = m.explicacion;
@@ -681,7 +678,6 @@
         if (lugarParam && misionesDefinidas[lugarParam]) {
             misionActualEscaneada = parseInt(lugarParam);
             if (sesionPrevia) {
-                // Pequeño retardo para asegurar que Firebase haya cargado los datos remotos
                 setTimeout(() => {
                     const jugador = partida.jugadores.find(j => j.codigo === sesionPrevia);
                     if (jugador) {
@@ -873,26 +869,41 @@
         const jugador = partida.jugadores.find(j => j.codigo === pin);
         const visor = document.getElementById('visorFotosAdmin');
         const contenido = document.getElementById('visorContenido');
-        contenido.innerHTML = '';
-
-        Object.keys(jugador.tareas).forEach(num => {
-            const t = jugador.tareas[num];
-            if (t.hecho && t.foto) {
-                const nombreArchivo = `${jugador.nombre}_Lugar_${num}.png`;
-                contenido.innerHTML += `
-                    <div style="margin-bottom: 25px; border-bottom: 1px dashed var(--border-color); padding-bottom: 20px;">
-                        <h4 style="color: var(--crew-color); margin-bottom: 5px;">${misionesDefinidas[num].titulo}</h4>
-                        <img src="${t.foto}" style="max-width:100%; max-height:250px; border-radius:5px; border:1px solid var(--border-color); display:block; margin: 10px auto;"><br>
-                        <div style="display:flex; gap:10px; max-width:300px; margin:0 auto;">
-                            <button class="success" onclick="descargarFotoMision('${t.foto}', '${nombreArchivo}')" style="padding: 6px; font-size:0.8rem; margin:0;">📥 Descargar</button>
-                            <button onclick="eliminarFotoMision('${pin}', ${num})" style="padding: 6px; font-size:0.8rem; background-color: var(--impostor-color); margin:0;">Rechazar</button>
-                        </div>
-                    </div>
-                `;
-            }
-        });
+        
+        contenido.innerHTML = '<p style="text-align:center; color:var(--accent-color);">Cargando fotos desde el servidor...</p>';
         visor.style.display = 'block';
         window.scrollTo(0, document.body.scrollHeight);
+
+        // El coordinador descarga las fotos solo bajo demanda
+        db.ref(`fotos_misiones/${pin}`).once('value').then((snapshot) => {
+            const fotos = snapshot.val() || {};
+            contenido.innerHTML = '';
+            
+            let hayFotos = false;
+            Object.keys(jugador.tareas).forEach(num => {
+                const t = jugador.tareas[num];
+                const fotoBase64 = fotos[`mision_${num}`]; // Extraemos la foto de la nueva ruta
+
+                if (t.hecho && fotoBase64) {
+                    hayFotos = true;
+                    const nombreArchivo = `${jugador.nombre}_Lugar_${num}.png`;
+                    contenido.innerHTML += `
+                        <div style="margin-bottom: 25px; border-bottom: 1px dashed var(--border-color); padding-bottom: 20px;">
+                            <h4 style="color: var(--crew-color); margin-bottom: 5px;">${misionesDefinidas[num].titulo}</h4>
+                            <img src="${fotoBase64}" style="max-width:100%; max-height:250px; border-radius:5px; border:1px solid var(--border-color); display:block; margin: 10px auto;"><br>
+                            <div style="display:flex; gap:10px; max-width:300px; margin:0 auto;">
+                                <button class="success" onclick="descargarFotoMision('${fotoBase64}', '${nombreArchivo}')" style="padding: 6px; font-size:0.8rem; margin:0;">📥 Descargar</button>
+                                <button onclick="eliminarFotoMision('${pin}', ${num})" style="padding: 6px; font-size:0.8rem; background-color: var(--impostor-color); margin:0;">Rechazar</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            if (!hayFotos) {
+                contenido.innerHTML = '<p style="text-align:center; color:#747d8c;">No hay fotos registradas para este jugador.</p>';
+            }
+        });
     }
 
     function descargarFotoMision(base64Data, nombreArchivo) {
@@ -903,9 +914,14 @@
 
     function eliminarFotoMision(pin, numMision) {
         if (confirm("¿Invalidar esta foto?")) {
-            const jugador = partida.jugadores.find(j => j.codigo === pin);
-            jugador.tareas[numMision].hecho = false; jugador.tareas[numMision].foto = "";
-            guardarEnFirebase();
+            const idx = partida.jugadores.findIndex(j => j.codigo === pin);
+            
+            // 1. Quitamos el check de la misión
+            db.ref(`partida_among_us/jugadores/${idx}/tareas/${numMision}/hecho`).set(false);
+            
+            // 2. Borramos la foto pesada de la carpeta secundaria
+            db.ref(`fotos_misiones/${pin}/mision_${numMision}`).remove();
+            
             document.getElementById('visorFotosAdmin').style.display = 'none';
         }
     }
@@ -1173,7 +1189,7 @@
         } else {
             form.innerHTML = `
                 <p style="color: var(--accent-color); font-weight: bold; text-align: center;">📸 Haz una foto en este momento para verificar la misión:</p>
-                <input type="file" id="misionFoto" accept="image/*" capture="environment" onchange="previewImage(event)">
+                <input type="file" id="misionFoto" accept="image/*" onchange="previewImage(event)">
                 <img id="imgPreview" alt="Previsualización" style="max-width: 100%; max-height: 200px; margin: 10px 0; border: 1px solid var(--border-color); border-radius: 5px; display: none;">
                 <button onclick="enviarMision()">ENVIAR COMPROBACIÓN</button>
             `;
@@ -1239,7 +1255,7 @@
         });
     }
 
-function previewImage(event) {
+    function previewImage(event) {
         const file = event.target.files[0];
         if (!file) return;
 
@@ -1292,33 +1308,22 @@ function previewImage(event) {
         
         const idx = partida.jugadores.findIndex(j => j.codigo === jugadorActualLocal.codigo);
         if(idx !== -1) {
-            // 1. Actualizamos los datos en el móvil (en local)
-            partida.jugadores[idx].tareas[misionActualEscaneada].hecho = true;
-            partida.jugadores[idx].tareas[misionActualEscaneada].foto = fotoBase64Temporal;
-            
-            // 2. EL TRUCO ESTÁ AQUÍ: Solo enviamos a Firebase esta misión específica, no el juego entero
+            // 1. Marcamos la misión como completada en la partida principal (pesa muy pocos bytes)
             const rutaMision = `partida_among_us/jugadores/${idx}/tareas/${misionActualEscaneada}`;
-            db.ref(rutaMision).update({
-                hecho: true,
-                foto: fotoBase64Temporal
-            }).then(() => {
-                // 3. Todo ha ido bien, cerramos la pantalla de la misión
+            db.ref(rutaMision).update({ hecho: true });
+
+            // 2. Guardamos la foto en una carpeta separada para no saturar los móviles
+            const rutaFoto = `fotos_misiones/${jugadorActualLocal.codigo}/mision_${misionActualEscaneada}`;
+            db.ref(rutaFoto).set(fotoBase64Temporal).then(() => {
                 alert("¡Misión enviada correctamente!");
                 window.history.replaceState({}, document.title, window.location.pathname);
                 misionActualEscaneada = null;
                 mostrarRolPantalla(jugadorActualLocal);
             }).catch((error) => {
-                alert("Hubo un corte de red. Inténtalo de nuevo.");
+                alert("Error de conexión. Inténtalo de nuevo.");
                 console.error(error);
             });
         }
-    }
-        
-        guardarEnFirebase();
-        alert("¡Misión enviada correctamente!");
-        window.history.replaceState({}, document.title, window.location.pathname);
-        misionActualEscaneada = null;
-        mostrarRolPantalla(jugadorActualLocal);
     }
 
     function cancelarMision() {
